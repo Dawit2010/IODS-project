@@ -1,5 +1,10 @@
+# Read Me
 
-# Introduction to open data science course.Read me file. 
+## Introduction to open data science course.
+
+Data wrangling and analysis using R.
+
+
 
 
 [Go to course diary page](https://dawit2010.github.io/IODS-project/)
