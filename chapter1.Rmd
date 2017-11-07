@@ -1,5 +1,4 @@
 
-# About the Course
 ## Chapter 1
 
 *In this open data science coure, we explore techniques to analyze data using R and Rstudio.Answers to exercises will be deposited in the following repository*
