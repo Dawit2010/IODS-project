@@ -9,11 +9,89 @@ model which assumes linear relationship between a target variable of interest an
 
 The data we use for this analysis is [JYTOPKYS3](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt). It is an international survey of approaches to statistical learning. 
 
-- Data wrangling
+#### Data wrangling
 
-We first preprocessed the raw data to
+We first preprocessed the raw data found [here](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-data.txt) by combining existing variables and creating new variables. The script used for data wrangling and the preprocessed analysis ready dataset are available in the directory named data in the [git repository](https://github.com/Dawit2010/IODS-project). The details of how this is done including the R commands used can be found [here](https://github.com/Dawit2010/IODS-project/blob/master/data/create_learning2014.R). The analysis dataset after this data wrangling step ready for further analysis can be found [here](https://github.com/Dawit2010/IODS-project/blob/master/data/learning2014.txt)
+
+#### Regression analysis
+
+- Reading in data
+
+We read in the analysis ready dataset that we prepared (as described above):
+
+```{r}
+ldata <- read.table("data/learning2014.txt",header=T, sep="\t")
+```
+
+and explore the structure and dimention of the dataset.The dimension can also be using the dim function.
+```{r}
+str(ldata)
+dim(ldata)
+```
+The dataset contains 166 observations with 7 variables. Variables deep,stra,and surf are combined variables that were prepared in the data wrangling step. The data has information on student exam points along with gender, age, attitude, and three general methods of learning approaches measuring aspects of learning termed as deep, strategy and surface.
+
+- Overview of data
+
+Let's look at the top 6 observations in the dataset
+```{r}
+head(ldata)
+```
+
+We can have a simple summary of each variable. We can see the number of Female and male responders in the dataset. We can also observe the mean values for age, attitude, deep, stra, surf and exam points.
+```{r}
+summary(ldata)
+```
+
+It would be interesting to explore the relationship between variables. A nice function to do this is ggpairs of the package GGally that we learned from our datacamp exercise.
+```{r}
+library(GGally)
+library(ggplot2)
+
+# create a more advanced plot matrix with ggpairs()
+p <- ggpairs(ldata, mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
+p 
+```
+
+ggpairs plots the relationsship between all possible pairs of variables in the dataset. The distribution of each variable indicated, with most being normal while age, deep and points are skewed. Since we are interesed in the relationship of other variables to exam points, we can look closely their correlation to to Points. We collect all absolute correlation coefficent of the other variables to exam points, and sort them from highest to lowest. The variables are now ordered from most correlated to least correlated to exam points to help us choose variables for the regression analysis.
+
+```{r}
+corToPoints <- cor(ldata[-1])
+corToPoints
+sort(abs(corToPoints[,6][-6]),decreasing=T)
+
+```
+
+- Fitting a regression model
+
+We choose the first three highly correlated variables to exam points to build the regression model.
+
+```{r}
+examPointModel1 <- lm(Points ~ attitude + stra + surf, data = ldata)
+summary(examPointModel1)
+```
+
+The residuals appears to be distributed normally with mean close to zero, first and third quartiles with more or less equal distances from the mean indicating one of the assumptions for the model is valid. There is strong evidence for the estimated intercept 11.01, and coefficient for attitude 3.39. The evidence for coefficients for variables stra and surf is weak and we do not reject the null hypothesis that the beta parameters for the two variables in the linear model is equal to zero. We thus fit the model again with variables with which statistically significant relationship is observed.
+
+```{r}
+examPointModel2 <- lm(Points ~ attitude , data = ldata)
+summary(examPointModel2)
+
+p <- ggplot(ldata, aes(x = attitude, y = Points)) + geom_point() + stat_smooth(method = "lm", formula = y ~ x, size = 1)
+p
+```
+
+- Explaining the model
+
+The second model,examPointModel2, indicates that for every unit increase in attitude, exam point is increased 3.5 times. The multiple R-squared is a measure of the proportion of variance of the target variable (exam point) that's explained by the predictor variables (attitude). It has a value ranging from 0 to 1, and measures how well the predictor variables and the target variable are related. In our model, 0.19 or 19% of the variance in exam Points can be explained by the attitude variable. 
 
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+- Model diagnostic plots
+
+In simple linear regression model we assume linear relationship between the target and predictor variables, with the target variable modeled as a linear combination of the predictor variables. Errors, that is, the difference between the actual and predicted values of the target variable are assumed to be normally distributed with mean zero and a certain constant variance, and that they do not depend on the size of the predictor variable.
+
+```{r}
+par(mfrow = c(2,2))
+plot(examPointModel2, which = c(1, 2, 5))
+```
+
+The Q-Q plot for the residuals is shown on the top right. This plot can be used to assess if the normality assumption for the residuals (errors) is valid. In this case, the points do not significantly deviate from the theoretical quantiles of a normal distribution, indicating that the normality assumption is reasonable.The residuals vs fitted values scatter plot on the top left helps reveal if the residuals are dependent on the predictor variable.That is, if the residuals are randomly spread and their error does not systematically increase or decrease as a function of the size of fitted values, then the assumption that the residuals are not dependent on the size of the predictor variables is also valid. The bottom plot shows the impact of observations in the model by revealing their leverage. In some models,  observations with outlier predictor values might impact the model negatively, and this plot helps reveal such patterns inorder to remove those observations from building the model. In our model, there is no observation with leverage significantly higher than others. Overall, our model satisfies the assumptions in linear regression and appears to be a good model.
