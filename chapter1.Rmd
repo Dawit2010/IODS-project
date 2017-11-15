@@ -1,8 +1,12 @@
 
-## Chapter 1
+# Chapter 1 
+## Tools and methods
 
 *In this open data science coure, we explore techniques to analyze data using R and Rstudio.Answers to exercises will be deposited in the following repository*
 
-
-
 Link to IODS repository: https://github.com/dawit2010/IODS-project
+
+In chapter 1 of this course, we have looked at the tools we will use for data analysis. These are R - a free statistical programming language widely used for data analysis, Rstudio - an intergrated development environment for R that makes wokring with R easier and streamlined, and github - a version control system that allows systemized archiving of different versions of a project, in this case projects containing data analysis scripts.
+
+
+

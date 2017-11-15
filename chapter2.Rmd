@@ -1,6 +1,18 @@
-# Insert chapter 2 title here
 
-*Describe the work you have done this week and summarize your learning.*
+# Chapter 2
+## Regression and model validation
+
+Link to IODS repository: https://github.com/dawit2010/IODS-project
+
+In this chapter, we have looked at building and validating regression models using R. Specifically, we built a simple linear regression 
+model which assumes linear relationship between a target variable of interest and other variables. Thus allowing prediction of the values of the target variable based on information from other variables. 
+
+The data we use for this analysis is [JYTOPKYS3](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt). It is an international survey of approaches to statistical learning. 
+
+- Data wrangling
+
+We first preprocessed the raw data to
+
 
 - Describe your work and results clearly. 
 - Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
