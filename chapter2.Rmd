@@ -18,20 +18,23 @@ We first preprocessed the raw data found [here](http://www.helsinki.fi/~kvehkala
 - Reading in data
 
 We read in the analysis ready dataset that we prepared (as described above):
-
 ```{r}
 ldata <- read.table("data/learning2014.txt",header=T, sep="\t")
 ```
+
 and explore the structure and dimention of the dataset.The dimension can also be using the dim function.
+
 ```{r}
 str(ldata)
 dim(ldata)
 ```
+
 The dataset contains 166 observations with 7 variables. Variables deep,stra,and surf are combined variables that were prepared in the data wrangling step. The data has information on student exam points along with gender, age, attitude, and three general methods of learning approaches measuring aspects of learning termed as deep, strategy and surface.
 
 - Overview of data
 
 Let's look at the top 6 observations in the dataset
+
 ```{r}
 head(ldata)
 ```
@@ -39,7 +42,9 @@ We can have a simple summary of each variable. We can see the number of Female a
 ```{r}
 summary(ldata)
 ```
+
 It would be interesting to explore the relationship between variables. A nice function to do this is ggpairs of the package GGally that we learned from our datacamp exercise.
+
 ```{r}
 library(GGally)
 library(ggplot2)
@@ -48,6 +53,7 @@ library(ggplot2)
 p <- ggpairs(ldata, mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
 p 
 ```
+
 ggpairs plots the relationsship between all possible pairs of variables in the dataset. The distribution of each variable indicated, with most being normal while age, deep and points are skewed. Since we are interesed in the relationship of other variables to exam points, we can look closely their correlation to to Points. We collect all absolute correlation coefficent of the other variables to exam points, and sort them from highest to lowest. The variables are now ordered from most correlated to least correlated to exam points to help us choose variables for the regression analysis.
 
 ```{r}
@@ -88,4 +94,5 @@ In simple linear regression model we assume linear relationship between the targ
 par(mfrow = c(2,2))
 plot(examPointModel2, which = c(1, 2, 5))
 ```
+
 The Q-Q plot for the residuals is shown on the top right. This plot can be used to assess if the normality assumption for the residuals (errors) is valid. In this case, the points do not significantly deviate from the theoretical quantiles of a normal distribution, indicating that the normality assumption is reasonable.The residuals vs fitted values scatter plot on the top left helps reveal if the residuals are dependent on the predictor variable.That is, if the residuals are randomly spread and their error does not systematically increase or decrease as a function of the size of fitted values, then the assumption that the residuals are not dependent on the size of the predictor variables is also valid. The bottom plot shows the impact of observations in the model by revealing their leverage. In some models,  observations with outlier predictor values might impact the model negatively, and this plot helps reveal such patterns inorder to remove those observations from building the model. In our model, there is no observation with leverage significantly higher than others. Overall, our model satisfies the assumptions in linear regression and appears to be a good model.
