@@ -1,0 +1,161 @@
+
+# Chapter 3
+## Logistic Regression and cross validation
+
+Link to IODS repository: https://github.com/dawit2010/IODS-project
+
+In this chapter, we have looked at building and validating logistic regression models using R. Specifically, we build a logistic regression 
+model using which the relationship between explanatory variables and a binary target variable is modeled. 
+
+
+#### Data wrangling
+We first preprocessed the raw data found [here](https://archive.ics.uci.edu/ml/datasets/Student+Performance) by combining two datasets, and some of their variables. The details of how this is done including the R commands used can be found [here](https://github.com/Dawit2010/IODS-project/blob/master/data/create_alc.R). The analysis dataset after this data wrangling step ready for further analysis can be found [here](https://github.com/Dawit2010/IODS-project/blob/master/data/alcData.txt)
+
+#### Logistic regression analysis
+
+- Reading in data
+
+We read in the analysis ready dataset that we prepared (as described above):
+```{r}
+alcData <- read.table("data/alcData.txt",header=T, sep="\t")
+```
+
+and print the names of the variales. The data presents student achievement in maths and portugese in two secondary education portugese schools. The two datasets are combined using inner join, and some variables e.g grades are averaged from the two subject for each students. Our focus on alcohol consumption among the students.
+
+```{r}
+colnames(alcData)
+dim(alcData)
+```
+
+
+- Prior hypothesis regarding high alcohol use 
+
+I would assume that high/low alcohol usage among students would be strongly related to sex (men drinking  more than women), age (higher alcohol consumption among older students), studytime (low amount of study time related to higher alcohol use),absences(more absent students drink more). We will test this hypothesis below.
+
+- Exploration of the chosen variables 
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+str(alcData)
+par(mfrow = c(2,2))
+
+# draw a boxplots
+g1 <- ggplot(alcData, aes(x = high_use, y = age,col=sex))
+g1 + geom_boxplot() 
+
+g2 <- ggplot(alcData, aes(x = studytime,fill=high_use))
+g2 + geom_bar() 
+
+g3 <- ggplot(alcData, aes(x = high_use,y = absences, fill = high_use))
+g3 + geom_boxplot()  
+
+g4 <- ggplot(alcData, aes(x = high_use,fill=sex))
+g4 + geom_bar() 
+```
+
+As can be seen in the plots, the four selected variables seem to hold up to the hypothesis made above. Particularly, more males were high alcohol consumers while more female were low alcholoc consumers, no noticeable differnce in age is seen between high and low alcohol users, students with high study time seemed to drink less while recurrent absentees seemed to drink more.
+
+- Building the model
+
+```{r}
+m <- glm(high_use ~  absences + studytime + age + sex, data = alcData, family = "binomial")
+summary(m)
+
+# compute odds ratios (OR)
+OR <- coef(m) %>% exp
+
+# compute confidence intervals (CI)
+CI <- confint(m) %>% exp
+
+# print out the odds ratios with their confidence intervals
+cbind(OR, CI)
+
+
+```
+
+Except the age variable,the other three variable have significant relationship with the target variable (high/low alcohol consumption). Studytime has a negative relationship to the target variable, with increased study time associated to lower alcohol consumption. We now look at the coefficient of the model as odds ratios:
+
+```{r}
+
+# compute odds ratios (OR)
+OR <- coef(m) %>% exp
+
+# compute confidence intervals (CI)
+CI <- confint(m) %>% exp
+
+# print out the odds ratios with their confidence intervals
+cbind(OR, CI)
+
+
+```
+
+The confidene interval for age contains 1, meaning that the odds ratio determined for age is not always above 1 or vice versa, also reflecting its high p-value in the model. So age should be dropped from the model. The remaining three variables show good relationship strong ORs, with students of higher studytime having lower odds for high alcohol use compared to students of lower study time.In sex variable, the males have high consumption (female is used as reference for the sex factor variable in the model)
+
+- Tabulation of model predictions vs actual values
+
+First, I remove the poorly associated age from the model.
+
+```{r}
+m <- glm(high_use ~  absences + studytime + sex, data = alcData, family = "binomial")
+summary(m)
+
+```
+
+then use the new model for prediction of high_use status:
+
+```{r}
+# predict() the probability of high_use
+probabilities <- predict(m, type = "response")
+
+# add the predicted probabilities to 'alc'
+alcData <- mutate(alcData, probability = probabilities)
+
+# use the probabilities to make a prediction of high_use
+alcData <- mutate(alcData, prediction = probability > 0.5)
+
+# initialize a plot of 'high_use' versus 'probability' in 'alc'
+g <- ggplot(alcData, aes(x = probability, y = high_use,col=prediction))
+
+# define the geom as points and draw the plot
+g + geom_point()
+
+# tabulate the target variable versus the predictions
+table(high_use = alcData$high_use, prediction = alcData$prediction) %>% prop.table() %>% addmargins()
+
+```
+
+We can see from the tabulation that, of the FALSE predictions about 0.23036649 were wrongly predicted, while for TRUE predictions about 0.02617801 were wrong prediction, totalling a prediction error of 0.2565445 (about 26% error). To compare to simple guessing, lets calculate penalty or loss of the classifier model using a loss function first.
+
+```{r}
+# define a loss function (mean prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# call loss_func with a simple guess for prediction probabilities of 0 or 1 for all
+loss_func(class = alcData$high_use, prob = 0)
+loss_func(class = alcData$high_use, prob = 1)
+
+loss_func(class = alcData$high_use, prob = alcData$probability)
+```
+
+As can be seen, a simple guessing of the prediction probabilities for high_use as 0 or 1 for all observations results in higher prediction error than our model. Our logistic regression model has a better prediction accuracy than simple guessing.
+
+- Cross validation of the model
+
+```{r}
+
+# K-fold cross-validation
+library(boot)
+cv <- cv.glm(data = alcData, cost = loss_func, glmfit = m, K = 10)
+
+# average number of wrong predictions in the cross validation
+cv$delta[1]
+```
+
+The model built here has more or less the same performance as the model in data camp, with an error of 0.2617801 after 10-fold cross validation.
+
+
