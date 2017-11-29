@@ -29,7 +29,7 @@ summary(Boston)
 
 ```
 
-As we can see from the summary of the variables, the variables have different scales with for example chas variable having a maximum of 1 while tax variable has a maximum of 711. The variables needs to be standardized before further analysis.
+As we can see from the summary of the variables, the variables have different scales with for example chas variable having a maximum of 1 while tax variable has a maximum of 711. The variables need to be standardized before further analysis.
 
 ```{r message=FALSE, warning=FALSE}
 library(dplyr)
