@@ -1,0 +1,227 @@
+
+# Chapter 4
+## Clustering and classification
+
+In this chapter, we have looked at how to perform clustering and classification using R. 
+#### classification using LDA, and clustering with kmeans
+
+- Loading the Boston data from the MASS package.
+
+```{r}
+library(MASS)
+
+# load the data
+data("Boston")
+
+# explore the dataset
+dim(Boston)
+str(Boston)
+head(Boston)
+```
+
+The Boston dataset contains housing value information on suburbs of Boston.It contains 506 observations with 14 variables.  For each suburb, the data provides information such as per capita crime rate, pupil-teacher ratio, access to highways, etc. 
+
+- Overview of the Boston data
+
+```{r message=FALSE, warning=FALSE}
+head(Boston)
+summary(Boston)
+
+```
+
+As we can see from the summary of the variables, the variables have different scales with for example chas variable having a maximum of 1 while tax variable has a maximum of 711. The variables needs to be standardized before further analysis.
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(corrplot)
+
+cor_matrix<-cor(Boston) 
+
+cor_matrix <- cor_matrix %>% round(digits=2) 
+cor_matrix
+
+# visualize the correlation matrix
+corrplot(cor_matrix, method="circle",type="upper",tl.pos = "d",tl.cex = 0.8)
+```
+
+The crime rate seems to have strongest positive correlation to rad (accessibility to radial highways measure) and tax (property tax rate) variables. The relationship between any two variables can be observed from the correlation plot above.
+
+Alternatively, we can use the pairs R function to exlore the relationship between every possible pair of variables in the dataset. We plot pairwise scatter plot for the first 3 variables below.  
+
+```{r}
+# plot pairwise scatter plot for the first 3 variables
+pairs(Boston[1:3])
+```
+
+
+
+- Scaling the data, and creating a categorical variable for crime rate
+
+
+```{r message=FALSE, warning=FALSE}
+
+# center and standardize variables
+boston_scaled <- scale(Boston)
+
+# summaries of the scaled variables
+summary(boston_scaled)
+
+# change the object to data frame
+boston_scaled <- as.data.frame(boston_scaled)
+
+
+```
+
+After scaling using standardization, every variable (for each column i.e variable x, subtract the mean from each value and divide by standard deviation i.e (x-mean(x))/sd(x)), all variables now have a mean of 0, and a standard deviation of 1. 
+
+Next, we create a categorical variable for crime rate dividing it into low to high crime rate classes based on its quantiles. 
+
+
+```{r message=FALSE, warning=FALSE}
+
+# create a quantile vector of crim and print it
+bins <- quantile(boston_scaled$crim)
+bins
+
+# create a categorical variable 'crime'
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE,labels=c("low","med_low","med_high","high"))
+
+# remove original crim from the dataset
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+
+# add the new categorical value to scaled data
+boston_scaled <- data.frame(boston_scaled, crime)
+```
+
+Next, we divide the dataset into training(80%) and testing(20%) portions. We save the correct crime classes in the test data. We then remove the crime variable from the test data to predict it using our classification model.
+
+```{r message=FALSE, warning=FALSE}
+
+# number of rows in the Boston dataset 
+n <- nrow(boston_scaled)
+
+# choose randomly 80% of the rows
+ind <- sample(n,  size = n * 0.8)
+
+# create train set
+train <- boston_scaled[ind,]
+
+# create test set 
+test <- boston_scaled[-ind,]
+
+# save the correct classes from test data
+correct_classes <- test$crime
+
+# remove the crime variable from test data
+test <- dplyr::select(test, -crime)
+
+```
+
+- Classification using linear discriminant analysis (LDA) 
+
+Next, we fit LDA model on the training data using the categorical crime variable as the multiclass target variable, and all other variables in the datasets as predictors.
+
+```{r message=FALSE, warning=FALSE}
+# linear discriminant analysis
+lda.fit <- lda(crime ~ . , data = train)
+
+# print the lda.fit object
+lda.fit
+
+# plot the lda results
+classes <- as.numeric(train$crime)
+plot(lda.fit, dimen = 2,col = classes,pch=classes)
+
+
+```
+
+- Predicting crime in the test data
+
+We have saved the correct crime classes above. We now predict the crime class for each observation in the test data using our lda model, lda.fit. We also tabulate the prediction results with the true classes of the test data.
+
+```{r message=FALSE, warning=FALSE}
+# predict classes with test data
+lda.pred <- predict(lda.fit, newdata = test)
+
+# cross tabulate the results
+table(correct = correct_classes, predicted = lda.pred$class)
+
+```
+
+The LDA model predictions for each class of crime were mostly correct. The model seems to work best in predicting high crime and med_high crime categories (it's not as sensitive for low and med_low classes). 
+
+- Kmeans clustering of Boston dataset
+
+As seen blow, we reload the Boston dataset, and standardize the dataset. Then calculate distance between the observations. We then run kmeans with k=3 first, then we investigate the optimal k and run the algorithm again.
+
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+
+data('Boston')
+boston_scaled <- scale(Boston)
+
+# euclidean distance matrix
+dist_eu <- dist(boston_scaled)
+summary(dist_eu)
+
+# k-means clustering
+km <-kmeans(boston_scaled, centers = 3)
+
+pairs(Boston[6:10], col = km$cluster)
+
+
+# determine the number of clusters
+k_max <- 20
+
+# calculate the total within sum of squares
+twcss <- sapply(1:k_max, function(k){kmeans(boston_scaled, k)$tot.withinss})
+
+# visualize the results
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+
+# k-means clustering
+km2 <-kmeans(boston_scaled, centers = 2)
+pairs(Boston[2:10], col = km2$cluster)
+
+```
+
+The analysis on the scaled Boston data did not find an optimal k that's different from what we saw in the datacamp exercise. The drastic drop in total within sum of squares still happens around k=2 or K=3, even though the decrease continues gradually and appears to stabilize around k=10. For now we used k=2 as the optimal k and rerun kmeans. K around 10 could also be an ideal choice, and can be investigated further in real research situations. Using the pairs function, we also did scatter plots between pairs of variables, the observations are colored according to the clusters they belong to. The scatter plots do not show clear, separate clusters even though they appear to make sense in some scatters (e.g nox vs rm plot)
+
+- Bonus
+
+To perfom LDA on the Boston dataset using k-means assigned cluster labels as the target variable, we first run kmeans on the scaled data (boston_scaled) using k = 3, then add the clustering results as categorical variable to the data. Then we fit LDA with the clustering results as the target variable.  
+
+```{r message=FALSE, warning=FALSE}
+set.seed(42)
+# k-means clustering, for stable clustering result, set iter.max and nstart higher.
+km2 <-kmeans(boston_scaled, centers = 3,iter.max=30,nstart=10)
+
+boston_scaled <- data.frame(boston_scaled, clusterLabel=km2$cluster)
+
+# linear discriminant analysis
+lda.fitkmClusters <- lda(clusterLabel ~ . , data = boston_scaled)
+lda.fitkmClusters
+
+# the function for lda biplot arrows: function copied from datacamp exercise
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+# plot the lda results
+plot(lda.fitkmClusters, dimen = 2,col = boston_scaled$clusterLabel)
+lda.arrows(lda.fitkmClusters, myscale = 3)
+
+```
+
+As can be seen from the arrows on the biplot, the variable age seems to be highly influential separator for cluster 1, and tax, indus and rad for cluster 2. variables rm and zn look most influential in the separation of cluster 3.
+
+
+#### Data wrangling to get the 'human' data
+The data wrangling work for next week data has been done. The details of how this was done including the R commands used can be found in  (https://github.com/Dawit2010/IODS-project/blob/master/data/create_human.R). The human dataset after the data wrangling can be found (https://github.com/Dawit2010/IODS-project/blob/master/data/human.txt)
+
+
