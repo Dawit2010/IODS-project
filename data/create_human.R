@@ -43,6 +43,7 @@ human <- inner_join(hd, gii, by = "Country", suffix=c(".hd",".gii"))
 str(human)
 head(human)
 
+# human data has 195 observations and 19 variables.
 
 # Writing the human data
 
