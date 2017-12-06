@@ -1,0 +1,101 @@
+
+# Chapter 5
+## Dimensionality reduction techniques
+
+In this chapter, we have looked at dimensionality reduction using PCA and MCA.
+
+#### Dimensionality reduction using PCA 
+
+- Loading the human data
+We first load the human data containing Human development and gender inequality data for each country (original data obtained from : http://hdr.undp.org/en/content/human-development-index-hdi). The data combines several indicator variables of human development and gender inequality from 155 countries in the world. This data contains 155 observations (countries) and 8 variables (indicators) for each observation.
+
+```{r}
+human <- read.table("data/human.txt",header=T, sep="\t")
+str(human)
+```
+
+- Overview of the human data
+
+```{r message=FALSE, warning=FALSE}
+summary(human)
+
+library(GGally)
+
+ggpairs(human)
+
+```
+
+The mean and range of each variables across the 155 countries can be seen using summary(human). The mean GNI per capita is 17628. Mean percentage of women in parlament is approx. 21%, which is much lower than the expected 50%. As can be seen from the correlations indicated above, there is a strong negative correlation between maternal mortality rate and life expectancy, and the strongest positive correlation is observed between expected education in years and life expectancy.
+
+
+- perfrom PCA
+
+We first perform PCA on the not standardized human data. As can be seen in the summary output, the first principal component PC1 captures more than 99% of the variability in the data. PC1 and PC2 combined capture 100% of the variability.
+
+```{r message=FALSE, warning=FALSE, fig.cap="HumanPCA.1: PCA using non-standardized human data clusters countries mostly by PC1 which captures variation mostly from GNI per capita"}
+
+pcaNS_human <- prcomp(human)
+summary(pcaNS_human)
+
+pca_pr <- round(100*summary(pcaNS_human)$importance[2, ], digits = 5)
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+
+biplot(pcaNS_human, choices = 1:2,cex = c(0.6, 0.8),col = c("grey40", "deeppink2"),xlab = pc_lab[1], ylab = pc_lab[2])
+```
+
+As can be seen from the biplot of the pca above, the GNI per capita variable has a strong influence on PC1. It's very possible that most of the variation is coming from this variable because of scaling differences between variables, with GNI per capita having high variation and range and thus affecting the PCA and biasing the result.
+
+Next we perform PCA on the standardized human data set. 
+
+```{r message=FALSE, warning=FALSE, fig.cap="HumanPCA.2: PCA using standardized human data utilizes most variables and captures the real variation in the data instead of bias coming form few variables.In the biplot, countries with similar human development and gender inequality performance cluster together. "}
+human_std <- scale(human)
+summary(human_std)
+pca_human <- prcomp(human_std)
+summary(pca_human)
+
+pca_pr <- round(100*summary(pca_human)$importance[2, ], digits = 1)
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+
+biplot(pca_human, choices = 1:2,cex = c(0.6, 0.8),col = c("grey40", "deeppink2"),xlab = pc_lab[1], ylab = pc_lab[2])
+```
+
+After performing PCA with the standardized human data (see above), PC1 captures 53.6% and PC2 captures 16.24% of the variablity in the data. The variablity captured by other principal components can be seen from the summary output above. PC1 and PC2 together capture 69.8% of the variability in the data. A biplot using PC1 and PC2 is also shown, with arrow direction indicating the variables that are contributing to the components. The PCA result obtained form the standardized human data is the proper way to do the analysis since we standardized all variables to the same scale, which allows PCA to work with the real variability in the data. When using data that is not standardized to the same scale, variables that have high range due to simply their measurement scale, will dominate the PCA resulting in wrong interpretation. 
+
+- Interpretation of PC1 and PC2 on standardized human data
+A number of insight can be gathered from HumanPCA.2. Expected years of education, life expectancy, GNI per capita, maternal mortality rate, adolescent birth rate are variables that contribute to PC1.countries with high expected years of education, life expectancy and GNI per capita cluster together. We can see counties with the opposite trend clustering together on the right hand of the plot. We could see that variables of female to male labor market ratio, and percent of females in parlament contribute to PC2, with those countries having higher female participation clustering in the top while those doing poorly in this regard clustering at the bottom. For example, Counties at the bottom-left could have good GNI,life expectancy etc but perform poorly in gender equality. 
+
+
+- Multiple Correspondence Analysis(MCA) on tea data
+
+We first load the tea dataset from the FactoMineR package. The tea data has 300 observations with 36 variables. We select some variables (as was done in the datacamp exercise), and visualize them using a barplot. We then perform MCA on the tea data with the selected variables.
+
+```{r message=FALSE, warning=FALSE}
+library(FactoMineR);
+library(dplyr);
+library(tidyr);
+library(ggplot2);
+
+data("tea")
+
+dim(tea)
+str(tea)
+
+# visualize the dataset using selected variables.
+# column names to keep in the dataset
+keep_columns <- c("Tea", "How", "how", "sugar", "where", "lunch")
+
+# select the 'keep_columns' to create a new dataset
+tea_time <- dplyr::select(tea, one_of(keep_columns))
+
+gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+
+# multiple correspondence analysis
+mca <- MCA(tea_time, graph = FALSE)
+summary(mca)
+plot(mca, invisible=c("ind"),habillage = "quali")
+
+```
+
+The cumulative percentage of variance explained by the first two MCA dimensions is 29.5%. We can see variable categories that are closer to each other in the mca biplot (each variable is colored differently, i.e variable categories of a variable are colored the same). For example,variable category earl grey appears closer with variable categories sugar and milk, indicating how it is drunk by the individuals in the tea data. 
+
